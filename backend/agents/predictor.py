@@ -1,10 +1,13 @@
 """
-Predictor Agent - Predicts tomorrow's AQI using Prophet ML model
+Predictor Agent - Predicts tomorrow's AQI using trained ML model
+Uses the best model trained on city_day.csv dataset
 """
 import joblib
 import os
 import logging
+import numpy as np
 from typing import Dict, Optional
+from datetime import datetime, timedelta
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -181,38 +184,203 @@ def get_aqi_category(aqi: int) -> str:
 
 class PredictorAgent:
     """
-    Agent responsible for predicting AQI from weather data.
-    Converts PM2.5 concentration to AQI using EPA formula.
+    Agent responsible for predicting tomorrow's AQI using trained ML model.
+    Uses Random Forest/Gradient Boosting model trained on city_day.csv
     """
     
-    def __init__(self, model_path: str = "backend/ml/model.pkl"):
+    def __init__(self, model_path: str = "backend/ml/best_model.pkl"):
         """
-        Initialize the Predictor agent.
+        Initialize the Predictor agent with trained ML model.
         
         Args:
-            model_path: Path to the trained Prophet model pickle file (optional)
+            model_path: Path to the trained model pickle file
         """
         self.model_path = model_path
         self.model = None
+        self.scaler = None
+        self.city_encoder = None
         
-        # Load Prophet model if available (for future use)
+        # Load trained ML model
         if os.path.exists(model_path):
             try:
                 self.model = joblib.load(model_path)
-                logger.info(f"Prophet model loaded from {model_path}")
+                logger.info(f"✓ ML model loaded from {model_path}")
+                
+                # Load scaler
+                scaler_path = model_path.replace("best_model.pkl", "scaler.pkl")
+                if os.path.exists(scaler_path):
+                    self.scaler = joblib.load(scaler_path)
+                    logger.info(f"✓ Scaler loaded")
+                
+                # Load city encoder
+                encoder_path = model_path.replace("best_model.pkl", "city_encoder.pkl")
+                if os.path.exists(encoder_path):
+                    self.city_encoder = joblib.load(encoder_path)
+                    logger.info(f"✓ City encoder loaded")
+                    
             except Exception as e:
-                logger.warning(f"Failed to load Prophet model: {e}")
+                logger.warning(f"Failed to load ML model: {e}")
                 logger.info("Will use direct PM2.5 to AQI conversion instead")
+                self.model = None
         else:
-            logger.info(f"Prophet model not found at {model_path}")
+            logger.info(f"ML model not found at {model_path}")
             logger.info("Will use direct PM2.5 to AQI conversion instead")
     
-    def predict(self, weather_data: Dict) -> Dict:
+    def predict_with_ml(self, weather_data: Dict, city: str = "Delhi") -> Optional[int]:
         """
-        Predict comprehensive AQI from weather data with multiple pollutants.
+        Predict AQI using trained ML model.
+        
+        Args:
+            weather_data: Dict with pollutant and weather data
+            city: City name for encoding
+        
+        Returns:
+            Predicted AQI or None if model not available
+        """
+        if not self.model or not self.scaler:
+            return None
+        
+        try:
+            # Prepare features in the same order as training
+            features = []
+            feature_names = ['PM2.5', 'PM10', 'NO', 'NO2', 'NOx', 'NH3', 'CO', 'SO2', 'O3',
+                           'Benzene', 'Toluene', 'Xylene', 'Month', 'DayOfYear', 'DayOfWeek']
+            
+            # Extract features
+            for feat in feature_names:
+                val = weather_data.get(feat.lower().replace('.', ''), 0)
+                features.append(float(val) if val is not None else 0.0)
+            
+            # Add temporal features
+            now = datetime.now()
+            features[12] = now.month  # Month
+            features[13] = now.timetuple().tm_yday  # DayOfYear
+            features[14] = now.weekday()  # DayOfWeek
+            
+            # Add city encoding
+            if self.city_encoder:
+                try:
+                    city_encoded = self.city_encoder.transform([city])[0]
+                except:
+                    city_encoded = 0  # Default if city not in training data
+            else:
+                city_encoded = 0
+            
+            features.append(city_encoded)
+            
+            # Scale features
+            features_array = np.array(features).reshape(1, -1)
+            features_scaled = self.scaler.transform(features_array)
+            
+            # Predict
+            aqi_pred = self.model.predict(features_scaled)[0]
+            
+            # Ensure AQI is in valid range
+            aqi_pred = max(0, min(500, int(aqi_pred)))
+            
+            logger.info(f"✓ ML model predicted AQI: {aqi_pred}")
+            return aqi_pred
+            
+        except Exception as e:
+            logger.error(f"ML prediction failed: {e}")
+            return None
+    
+    def predict_hourly(self, base_weather_data: Dict, city: str = "Delhi", hours: int = 24) -> list:
+        """
+        Predict hourly AQI for the next N hours using ML model.
+        
+        Args:
+            base_weather_data: Current weather data as baseline
+            city: City name
+            hours: Number of hours to predict (default 24)
+        
+        Returns:
+            List of hourly predictions with AQI, temp, humidity, etc.
+        """
+        hourly_predictions = []
+        now = datetime.now()
+        
+        for hour_offset in range(hours):
+            # Calculate time for this hour
+            forecast_time = now + timedelta(hours=hour_offset)
+            hour_of_day = forecast_time.hour
+            
+            # Create weather data for this hour with variations
+            hour_data = base_weather_data.copy()
+            
+            # Apply hourly variations
+            # Temperature: cooler at night, warmer during day
+            temp_base = base_weather_data.get("temp") or 25
+            if 6 <= hour_of_day < 12:  # Morning
+                temp_factor = 0.95 + (hour_of_day - 6) * 0.02
+            elif 12 <= hour_of_day < 18:  # Afternoon
+                temp_factor = 1.05 + (hour_of_day - 12) * 0.01
+            elif 18 <= hour_of_day < 22:  # Evening
+                temp_factor = 1.05 - (hour_of_day - 18) * 0.03
+            else:  # Night
+                temp_factor = 0.90
+            hour_data["temp"] = temp_base * temp_factor
+            
+            # Humidity: inverse of temperature
+            humidity_base = base_weather_data.get("humidity") or 60
+            hour_data["humidity"] = min(100, humidity_base * (2 - temp_factor))
+            
+            # Wind: typically higher during day
+            wind_base = base_weather_data.get("wind") or 10
+            if 10 <= hour_of_day < 18:
+                wind_factor = 1.2
+            else:
+                wind_factor = 0.8
+            hour_data["wind"] = wind_base * wind_factor
+            
+            # PM2.5: higher during rush hours and night (temperature inversion)
+            pm25_base = base_weather_data.get("pm25") or 50
+            if hour_of_day in [7, 8, 9, 18, 19, 20]:  # Rush hours
+                pm25_factor = 1.3
+            elif 22 <= hour_of_day or hour_of_day < 6:  # Night
+                pm25_factor = 1.15
+            else:
+                pm25_factor = 0.95
+            hour_data["pm25"] = pm25_base * pm25_factor
+            
+            # Other pollutants follow PM2.5 pattern
+            if "pm10" in base_weather_data and base_weather_data["pm10"] is not None:
+                hour_data["pm10"] = base_weather_data["pm10"] * pm25_factor
+            if "o3" in base_weather_data and base_weather_data["o3"] is not None:
+                # O3 higher during sunny hours
+                o3_factor = 1.2 if 11 <= hour_of_day < 16 else 0.8
+                hour_data["o3"] = base_weather_data["o3"] * o3_factor
+            if "no2" in base_weather_data and base_weather_data["no2"] is not None:
+                hour_data["no2"] = base_weather_data["no2"] * pm25_factor
+            if "so2" in base_weather_data and base_weather_data["so2"] is not None:
+                hour_data["so2"] = base_weather_data["so2"] * pm25_factor
+            if "co" in base_weather_data and base_weather_data["co"] is not None:
+                hour_data["co"] = base_weather_data["co"] * pm25_factor
+            
+            # Predict AQI for this hour
+            prediction = self.predict(hour_data, city)
+            
+            # Add time information
+            prediction["hour"] = hour_of_day
+            prediction["time"] = forecast_time.strftime("%I:%M %p")
+            prediction["date"] = forecast_time.strftime("%Y-%m-%d")
+            prediction["timestamp"] = forecast_time.isoformat()
+            prediction["temp"] = round(hour_data["temp"], 1)
+            prediction["humidity"] = round(hour_data["humidity"], 1)
+            prediction["wind"] = round(hour_data["wind"], 1)
+            
+            hourly_predictions.append(prediction)
+        
+        return hourly_predictions
+    
+    def predict(self, weather_data: Dict, city: str = "Delhi") -> Dict:
+        """
+        Predict comprehensive AQI from weather data.
+        Uses ML model if available, otherwise falls back to EPA formula.
         
         Args:
             weather_data: Dict with keys: temp, humidity, wind, pm25, pm10, o3, no2, so2, co
+            city: City name for ML model
         
         Returns:
             Dict with keys: aqi, category, pollutants (dict), dominant_pollutant, sources
@@ -224,6 +392,9 @@ class PredictorAgent:
             # Validate input
             if not isinstance(weather_data, dict):
                 raise ValueError("weather_data must be a dictionary")
+            
+            # Try ML model first for tomorrow's prediction
+            ml_aqi = self.predict_with_ml(weather_data, city)
             
             # Extract pollutant values
             pm25 = weather_data.get("pm25")

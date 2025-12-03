@@ -63,7 +63,7 @@ class PredictionRequest(BaseModel):
     lat: float = Field(..., ge=-90, le=90, description="Latitude (-90 to 90)")
     lon: float = Field(..., ge=-180, le=180, description="Longitude (-180 to 180)")
     profile: Optional[str] = Field("", max_length=200, description="Optional user health/activity profile")
-    use_search: bool = Field(True, description="Enable/disable web search for additional context")
+    use_search: bool = Field(False, description="Enable/disable web search for additional context (news only, not for AQI data)")
     
     @validator('city')
     def validate_city(cls, v):
@@ -146,18 +146,17 @@ async def startup_event():
         # Get API keys from environment
         gemini_api_key = os.getenv("GEMINI_API_KEY")
         tavily_api_key = os.getenv("TAVILY_API_KEY")
-        openaq_api_key = os.getenv("OPENAQ_API_KEY")
+        waqi_api_key = os.getenv("WAQI_API_KEY") or os.getenv("WAQI_TOKEN")
         
         logger.info("API keys loaded from environment")
         
         # Initialize all agents with appropriate keys
         logger.info("Initializing DataCollector agent...")
-        if openaq_api_key:
-            logger.info("OpenAQ API key found - enabling real sensor data")
-            data_collector = DataCollectorAgent(openaq_api_key=openaq_api_key)
+        if waqi_api_key:
+            logger.info("WAQI API key found - using WAQI for real-time AQI data")
         else:
-            logger.info("No OpenAQ API key - using estimated data")
-            data_collector = DataCollectorAgent()
+            logger.warning("No WAQI API key - will rely on Tavily fallback only")
+        data_collector = DataCollectorAgent()
         
         logger.info("Initializing Predictor agent...")
         predictor = PredictorAgent(model_path="backend/ml/model.pkl")
@@ -316,7 +315,7 @@ async def predict(request: PredictionRequest):
         HTTPException: For various error conditions
     """
     # Track data sources for attribution
-    data_sources = ["Open-Meteo API"]
+    data_sources = []
     search_results_data = None
     search_context = None
     
@@ -343,6 +342,15 @@ async def predict(request: PredictionRequest):
             today_data = multi_day_data.get("today")
             tomorrow_data = multi_day_data.get("tomorrow")
             
+            # Track data source
+            source = multi_day_data.get("source", "Unknown")
+            if source == "WAQI":
+                data_sources.append("WAQI API")
+            elif source == "Tavily":
+                data_sources.append("Tavily Search")
+            elif source.startswith("cache"):
+                data_sources.append("Cache")
+            
             logger.info(f"Weather data collected for tomorrow: temp={tomorrow_data.get('temp')}°C, humidity={tomorrow_data.get('humidity')}%, pm25={tomorrow_data.get('pm25')}")
             if today_data:
                 logger.info(f"Weather data collected for today: temp={today_data.get('temp')}°C, humidity={today_data.get('humidity')}%, pm25={today_data.get('pm25')}")
@@ -362,7 +370,7 @@ async def predict(request: PredictionRequest):
             logger.error(f"DataCollector failed: {type(e).__name__}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Failed to fetch weather data from Open-Meteo API. Please check your coordinates and try again. Error: {str(e)}"
+                detail=f"Failed to fetch weather data. Please check your coordinates and API keys. Error: {str(e)}"
             )
         
         # Step 2: Predict AQI
@@ -472,7 +480,7 @@ async def predict(request: PredictionRequest):
         today_aqi_data = None
         if today_data:
             try:
-                today_aqi_data = predictor.predict(today_data)
+                today_aqi_data = predictor.predict(today_data, request.city)
                 today_forecast = {
                     "temp": today_data.get("temp"),
                     "humidity": today_data.get("humidity"),
@@ -486,11 +494,25 @@ async def predict(request: PredictionRequest):
             except Exception as e:
                 logger.warning(f"Failed to process today's data: {e}")
         
+        # Generate hourly predictions for next 24 hours
+        logger.info("Generating hourly predictions for next 24 hours...")
+        hourly_forecast = []
+        try:
+            hourly_forecast = predictor.predict_hourly(
+                base_weather_data=weather_data,
+                city=request.city,
+                hours=24
+            )
+            logger.info(f"Generated {len(hourly_forecast)} hourly predictions")
+        except Exception as e:
+            logger.warning(f"Failed to generate hourly predictions: {e}")
+        
         # Build response with all data
         response_data = {
             "city": request.city,
             "forecast": forecast_data,  # Tomorrow's forecast (main)
             "today_forecast": today_forecast,  # Today's forecast (additional)
+            "hourly_forecast": hourly_forecast,  # 24-hour predictions
             "summary": summary,
             "advice": advice,
             "search_results": search_results_data,

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Thermometer, Droplets, Wind, Activity, Sparkles, ExternalLink, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 import { useState } from 'react'
+import HourlyForecast from './HourlyForecast'
 
 function ForecastDisplay({ darkMode, result }) {
   const [expandedSearch, setExpandedSearch] = useState(false)
@@ -135,6 +136,11 @@ function ForecastDisplay({ darkMode, result }) {
         )}
         <DayCard forecast={result.forecast} label="Tomorrow" delay={result.today_forecast ? 0.2 : 0.1} />
       </div>
+
+      {/* Hourly Forecast */}
+      {result.hourly_forecast && result.hourly_forecast.length > 0 && (
+        <HourlyForecast darkMode={darkMode} hourlyData={result.hourly_forecast} />
+      )}
 
       {/* Pollutants Breakdown */}
       {result.forecast.pollutants && Object.keys(result.forecast.pollutants).length > 0 && (

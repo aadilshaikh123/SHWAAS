@@ -20,7 +20,20 @@ class RecommenderAgent:
             gemini_api_key: Google Gemini API key
         """
         genai.configure(api_key=gemini_api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        # Try multiple model names in order of preference
+        model_names = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+        self.model = None
+        for model_name in model_names:
+            try:
+                self.model = genai.GenerativeModel(model_name)
+                print(f"✓ Using Gemini model: {model_name}")
+                break
+            except:
+                continue
+        
+        if not self.model:
+            self.model = genai.GenerativeModel('gemini-pro')  # Fallback
+        
         self.max_retries = 3
         self.base_delay = 1  # seconds
     

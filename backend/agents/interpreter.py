@@ -20,7 +20,14 @@ class InterpreterAgent:
             gemini_api_key: Google Gemini API key
         """
         genai.configure(api_key=gemini_api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        # Use the latest available Gemini model
+        try:
+            self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
+        except:
+            try:
+                self.model = genai.GenerativeModel('gemini-1.5-pro')
+            except:
+                self.model = genai.GenerativeModel('gemini-pro')
         self.max_retries = 3
         self.base_delay = 1  # seconds
     

@@ -17,7 +17,7 @@ function App() {
         lat: null,
         lon: null,
         profile: '',
-        useSearch: true
+        useSearch: false
     })
 
     const [loading, setLoading] = useState(false)
