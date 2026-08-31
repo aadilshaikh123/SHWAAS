@@ -2,9 +2,11 @@
 # so anything added here counts against the 250MB bundle limit.
 # ML training deps (pandas, scikit-learn, numpy) live in ML/requirements_ml.txt.
 
-# FastAPI and server dependencies
-fastapi==0.104.1
-pydantic==2.5.0
+# FastAPI and server dependencies.
+# Not pinned to 0.104.1/2.5.0 any more: pydantic-core 2.14.1 ships no Linux wheel for
+# current Python, so Vercel tried to compile it from Rust source and the build failed.
+fastapi>=0.115
+pydantic>=2.9
 
 # HTTP requests - also how we call Gemini and Groq, so no vendor SDKs are needed
 requests==2.31.0
