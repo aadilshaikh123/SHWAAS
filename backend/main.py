@@ -112,17 +112,29 @@ def validate_environment():
     Raises:
         EnvironmentError: If required environment variables are missing
     """
-    required_vars = {
-        "GEMINI_API_KEY": "Google Gemini API key for natural language generation",
-        "TAVILY_API_KEY": "Tavily API key for web search functionality"
-    }
-    
+    def is_set(name):
+        value = os.getenv(name)
+        return bool(value and value.strip())
+
     missing_vars = []
-    for var_name, description in required_vars.items():
-        value = os.getenv(var_name)
-        if not value or value.strip() == "":
-            missing_vars.append(f"  - {var_name}: {description}")
-    
+
+    # WAQI is the only source of actual air quality data - without it every
+    # request fails in DataCollector.
+    if not is_set("WAQI_API_KEY") and not is_set("WAQI_TOKEN"):
+        missing_vars.append("  - WAQI_API_KEY (or WAQI_TOKEN): real-time air quality data")
+
+    # Either LLM provider is enough; llm.generate falls back between them, and
+    # both agents fall back to templates if neither answers.
+    if not is_set("GEMINI_API_KEY") and not is_set("GROQ_API_KEY"):
+        missing_vars.append(
+            "  - GEMINI_API_KEY or GROQ_API_KEY: at least one is needed to generate "
+            "summaries and advice"
+        )
+
+    # Optional: search is opt-in per request and degrades cleanly.
+    if not is_set("TAVILY_API_KEY"):
+        logger.warning("TAVILY_API_KEY not set - the 'include latest news' option will return nothing")
+
     if missing_vars:
         error_message = (
             "Missing required environment variables:\n" +
@@ -133,7 +145,7 @@ def validate_environment():
         logger.error(error_message)
         raise EnvironmentError(error_message)
     
-    logger.info("Environment validation passed - all required API keys present")
+    logger.info("Environment validation passed")
 
 
 @app.on_event("startup")
