@@ -61,3 +61,7 @@ pnpm-lock.yaml
 
 # Local virtualenv
 .venv/
+
+.vercel
+.env.local
+.vercel
