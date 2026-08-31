@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{ML/**,frontend/**,.venv/**,**/__pycache__/**,**/test_*.py,*.md}"
+    }
+  },
+  "rewrites": [
+    { "source": "/predict", "destination": "/api/index" },
+    { "source": "/health", "destination": "/api/index" }
+  ]
+}

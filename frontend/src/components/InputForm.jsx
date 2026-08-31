@@ -178,8 +178,8 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                     onClick={useMyLocation}
                     disabled={gettingLocation}
                     className={`w-full px-6 py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 font-semibold text-lg ${darkMode
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 text-white'
-                            : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-400 text-white'
+                            ? 'bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 disabled:from-gray-700 disabled:to-gray-700 text-white'
+                            : 'bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 disabled:from-gray-400 disabled:to-gray-400 text-white'
                         } shadow-lg`}
                 >
                     {gettingLocation ? (
@@ -223,7 +223,7 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                         onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                         required
                         autoComplete="off"
-                        className={`w-full px-4 py-3 rounded-xl border-2 focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 ${darkMode
+                        className={`w-full px-4 py-3 rounded-xl border-2 focus:ring-4 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-300 ${darkMode
                                 ? 'bg-white/10 border-white/20 text-white placeholder-gray-400'
                                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                             }`}
@@ -252,16 +252,16 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                                         whileHover={{ backgroundColor: darkMode ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }}
                                         className={`w-full px-4 py-3 text-left transition-colors duration-200 flex items-center justify-between ${selectedIndex === index
                                                 ? darkMode
-                                                    ? 'bg-purple-600/30'
-                                                    : 'bg-purple-100'
+                                                    ? 'bg-teal-600/30'
+                                                    : 'bg-teal-100'
                                                 : ''
                                             } ${darkMode
-                                                ? 'hover:bg-purple-600/20 text-white'
-                                                : 'hover:bg-purple-50 text-gray-900'
+                                                ? 'hover:bg-teal-600/20 text-white'
+                                                : 'hover:bg-teal-50 text-gray-900'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <MapPin className="w-4 h-4 text-purple-500" />
+                                            <MapPin className="w-4 h-4 text-teal-500" />
                                             <div>
                                                 <div className="font-semibold">{city.name}</div>
                                                 <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -321,7 +321,7 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                         value={formData.profile}
                         onChange={handleChange}
                         maxLength="200"
-                        className={`w-full px-4 py-3 rounded-xl border-2 focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 ${darkMode
+                        className={`w-full px-4 py-3 rounded-xl border-2 focus:ring-4 focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-300 ${darkMode
                                 ? 'bg-white/10 border-white/20 text-white placeholder-gray-400'
                                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                             }`}
@@ -347,7 +347,7 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                         name="useSearch"
                         checked={formData.useSearch}
                         onChange={handleChange}
-                        className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 focus:ring-2 cursor-pointer"
+                        className="w-5 h-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500 focus:ring-2 cursor-pointer"
                     />
                     <label htmlFor="useSearch" className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-2">
@@ -374,7 +374,7 @@ function InputForm({ darkMode, formData, setFormData, onSubmit, loading, error }
                     whileTap={{ scale: loading ? 1 : 0.98 }}
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                    className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
                     {loading ? (
                         <>

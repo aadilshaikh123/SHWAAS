@@ -16,7 +16,7 @@ function Header({ darkMode, setDarkMode, loading }) {
                 onClick={() => setDarkMode(!darkMode)}
                 className={`absolute top-0 right-0 p-3 rounded-2xl transition-all duration-300 ${darkMode
                         ? 'bg-white/10 text-yellow-300 hover:bg-white/20'
-                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
                     } backdrop-blur-sm`}
             >
                 <motion.div
@@ -45,8 +45,8 @@ function Header({ darkMode, setDarkMode, loading }) {
 
             <motion.h1
                 className={`text-4xl sm:text-5xl md:text-6xl font-black mb-3 transition-colors duration-300 ${darkMode
-                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400'
-                        : 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600'
+                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-cyan-400 to-sky-500'
+                        : 'text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-700'
                     }`}
             >
                 AgenticWeatherAI
@@ -65,7 +65,7 @@ function Header({ darkMode, setDarkMode, loading }) {
                     AI-Powered Weather & Air Quality Predictions
                 </p>
                 <div className="flex items-center justify-center gap-2 text-sm">
-                    <Sparkles className={`w-4 h-4 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                    <Sparkles className={`w-4 h-4 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`} />
                     <p
                         className={`transition-colors duration-300 ${darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}

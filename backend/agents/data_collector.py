@@ -6,6 +6,7 @@ Fallback: Tavily search for AQI information
 import requests
 import json
 import os
+import tempfile
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from backend.agents.waqi_collector import fetch_waqi_data
@@ -213,6 +214,21 @@ def _convert_waqi_to_standard(waqi_data: Dict) -> Dict:
     }
 
 
+def _cache_dir() -> str:
+    """
+    Where to keep the fallback cache.
+
+    Serverless platforms mount the deployment read-only except for a temp dir, so
+    honour CACHE_DIR when set and fall back to the system temp dir there.
+    """
+    override = os.getenv("CACHE_DIR")
+    if override:
+        return override
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return os.path.join(tempfile.gettempdir(), "shwaas-cache")
+    return "backend/cache"
+
+
 def get_cached_data(city: str) -> Optional[Dict]:
     """
     Retrieve cached weather data for a city.
@@ -223,7 +239,7 @@ def get_cached_data(city: str) -> Optional[Dict]:
     Returns:
         Dict with cached data or None if not available
     """
-    cache_dir = "backend/cache"
+    cache_dir = _cache_dir()
     cache_file = os.path.join(cache_dir, f"{city}_latest.json")
     
     if not os.path.exists(cache_file):
@@ -257,9 +273,7 @@ def save_to_cache(city: str, data: Dict) -> None:
         city: City name
         data: Weather data dict
     """
-    cache_dir = "backend/cache"
-    os.makedirs(cache_dir, exist_ok=True)
-    
+    cache_dir = _cache_dir()
     cache_file = os.path.join(cache_dir, f"{city}_latest.json")
     
     cache_data = {
@@ -269,10 +283,12 @@ def save_to_cache(city: str, data: Dict) -> None:
     }
     
     try:
+        os.makedirs(cache_dir, exist_ok=True)
         with open(cache_file, 'w') as f:
             json.dump(cache_data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving cache for {city}: {e}")
+    except OSError as e:
+        # Read-only filesystem is expected in serverless; the cache is best-effort.
+        print(f"Could not cache {city} (non-fatal): {e}")
 
 
 class DataCollectorAgent:

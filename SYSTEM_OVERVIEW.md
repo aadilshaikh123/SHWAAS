@@ -17,7 +17,7 @@ User Request → Backend API → Data Sources → ML Prediction → Response
 - **Purpose**: Real-time air quality data and weather
 - **Coverage**: 12,000+ monitoring stations worldwide
 - **Data**: AQI, PM2.5, PM10, O3, NO2, SO2, CO, Temperature, Humidity, Wind, Pressure
-- **Token**: `7616cb77c13b13fd483b76c94ae8ba422dc94e8c`
+- **Token**: `your_waqi_api_token_here`
 - **Rate Limit**: 1,000 requests/minute
 - **Status**: ✅ Active (ONLY source for AQI)
 
@@ -57,7 +57,7 @@ GEMINI_API_KEY=your_gemini_key
 TAVILY_API_KEY=your_tavily_key
 
 # Primary AQI Source
-WAQI_API_KEY=7616cb77c13b13fd483b76c94ae8ba422dc94e8c
+WAQI_API_KEY=your_waqi_api_token_here
 ```
 
 ## 📁 Project Structure

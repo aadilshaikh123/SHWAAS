@@ -66,13 +66,13 @@ function App() {
 
     return (
         <div className={`min-h-screen transition-all duration-700 ${darkMode
-            ? 'bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950'
-            : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50'
+            ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950'
+            : 'bg-gradient-to-br from-slate-50 via-cyan-50 to-teal-50'
             }`}>
             {/* Animated background elements */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <motion.div
-                    className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
+                    className="absolute top-20 left-10 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
                     animate={{
                         x: [0, 100, 0],
                         y: [0, 50, 0],
@@ -96,7 +96,7 @@ function App() {
                     }}
                 />
                 <motion.div
-                    className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
+                    className="absolute bottom-20 left-1/2 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
                     animate={{
                         x: [0, 50, 0],
                         y: [0, -50, 0],
@@ -156,7 +156,7 @@ function App() {
                     className={`text-center mt-16 mb-8 transition-colors duration-300`}
                 >
                     <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Built by <span className="font-semibold text-purple-500">AADIL SHAIKH</span> for your health babe.. 💜
+                        Built by <span className="font-semibold text-teal-500">AADIL SHAIKH</span> 💜
                     </p>
                 </motion.footer>
 

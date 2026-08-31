@@ -43,7 +43,7 @@ function ForecastDisplay({ darkMode, result }) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Calendar className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+          <Calendar className={`w-5 h-5 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`} />
           <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {label}
           </h3>
@@ -59,7 +59,7 @@ function ForecastDisplay({ darkMode, result }) {
 
       {/* Time of day indicator */}
       {forecast.forecast_hour !== undefined && (
-        <div className={`text-xs mb-3 px-2 py-1 rounded inline-block ${darkMode ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700'
+        <div className={`text-xs mb-3 px-2 py-1 rounded inline-block ${darkMode ? 'bg-teal-900/30 text-teal-300' : 'bg-teal-100 text-teal-700'
           }`}>
           {forecast.forecast_hour >= 5 && forecast.forecast_hour < 12 ? '🌅 Morning' :
             forecast.forecast_hour >= 12 && forecast.forecast_hour < 17 ? '☀️ Afternoon' :
@@ -157,7 +157,7 @@ function ForecastDisplay({ darkMode, result }) {
             className="w-full flex items-center justify-between mb-4"
           >
             <div className="flex items-center gap-3">
-              <Activity className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+              <Activity className={`w-5 h-5 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`} />
               <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 Pollutant Details
               </h3>
@@ -219,17 +219,17 @@ function ForecastDisplay({ darkMode, result }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className={`p-6 rounded-2xl ${darkMode ? 'bg-indigo-900/20' : 'bg-indigo-50'
-          } border ${darkMode ? 'border-indigo-500/20' : 'border-indigo-200'
+        className={`p-6 rounded-2xl ${darkMode ? 'bg-sky-900/20' : 'bg-sky-50'
+          } border ${darkMode ? 'border-sky-500/20' : 'border-sky-200'
           }`}
       >
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className={`w-5 h-5 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
+          <Sparkles className={`w-5 h-5 ${darkMode ? 'text-sky-400' : 'text-sky-600'}`} />
           <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Summary
           </h3>
         </div>
-        <p className={`leading-relaxed ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+        <p className={`leading-relaxed whitespace-pre-line ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
           {result.summary}
         </p>
       </motion.div>
@@ -239,8 +239,8 @@ function ForecastDisplay({ darkMode, result }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className={`p-6 rounded-2xl ${darkMode ? 'bg-green-900/20' : 'bg-green-50'
-          } border ${darkMode ? 'border-green-500/20' : 'border-green-200'
+        className={`p-6 rounded-2xl ${darkMode ? 'bg-slate-800/40' : 'bg-slate-50'
+          } border ${darkMode ? 'border-teal-500/20' : 'border-slate-200'
           }`}
       >
         <div className="flex items-center gap-2 mb-3">
@@ -249,7 +249,7 @@ function ForecastDisplay({ darkMode, result }) {
             Health Advice
           </h3>
         </div>
-        <p className={`leading-relaxed ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+        <p className={`leading-relaxed whitespace-pre-line ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
           {result.advice}
         </p>
       </motion.div>
@@ -260,8 +260,8 @@ function ForecastDisplay({ darkMode, result }) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className={`p-6 rounded-2xl ${darkMode ? 'bg-amber-900/20' : 'bg-amber-50'
-            } border ${darkMode ? 'border-amber-500/20' : 'border-amber-200'
+          className={`p-6 rounded-2xl ${darkMode ? 'bg-slate-800/40' : 'bg-slate-50'
+            } border ${darkMode ? 'border-sky-500/20' : 'border-slate-200'
             }`}
         >
           <button
@@ -274,7 +274,7 @@ function ForecastDisplay({ darkMode, result }) {
                 Latest News
               </h3>
               {result.search_results.total_sources && (
-                <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-amber-900/50 text-amber-300' : 'bg-amber-200 text-amber-900'
+                <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-sky-900/50 text-sky-300' : 'bg-sky-100 text-sky-800'
                   }`}>
                   {result.search_results.total_sources} sources
                 </span>
@@ -313,7 +313,7 @@ function ForecastDisplay({ darkMode, result }) {
                       : 'bg-white/60 hover:bg-white'
                       }`}
                   >
-                    <div className={`font-semibold text-sm mb-1 flex items-start gap-2 ${darkMode ? 'text-amber-300' : 'text-amber-900'
+                    <div className={`font-semibold text-sm mb-1 flex items-start gap-2 ${darkMode ? 'text-teal-300' : 'text-teal-800'
                       }`}>
                       <span className="flex-1">{item.title}</span>
                       <ExternalLink className="w-3 h-3 flex-shrink-0 mt-1 opacity-50" />
@@ -322,6 +322,14 @@ function ForecastDisplay({ darkMode, result }) {
                       <p className={`text-xs line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                         {item.content}
+                      </p>
+                    )}
+                    {item.published_date && !isNaN(new Date(item.published_date)) && (
+                      <p className={`text-[11px] mt-1.5 ${darkMode ? 'text-gray-500' : 'text-gray-500'
+                        }`}>
+                        {new Date(item.published_date).toLocaleDateString(undefined, {
+                          year: 'numeric', month: 'short', day: 'numeric'
+                        })}
                       </p>
                     )}
                   </a>

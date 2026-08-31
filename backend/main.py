@@ -8,8 +8,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, validator
 from typing import Optional
 import os
+import sys
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
+
+# Windows consoles default to cp1252; agent prints use non-ASCII glyphs and would
+# otherwise raise UnicodeEncodeError mid-request.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -294,7 +301,7 @@ async def health_check():
 
 
 @app.post("/predict")
-async def predict(request: PredictionRequest):
+def predict(request: PredictionRequest):
     """
     Predict tomorrow's weather and AQI for a given city.
     
@@ -428,26 +435,18 @@ async def predict(request: PredictionRequest):
         else:
             logger.info("Step 3: Skipping search (use_search=False)")
         
-        # Step 4: Generate summary
-        logger.info("Step 4: Generating summary...")
-        try:
-            summary = interpreter.summarize(
+        # Steps 4 and 5: Generate summary and recommendations.
+        # Independent Gemini calls, so run them together - sequentially they dominated
+        # the request time. /predict is a sync def in FastAPI's threadpool, so this is safe.
+        logger.info("Steps 4-5: Generating summary and recommendations...")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            summary_future = pool.submit(
+                interpreter.summarize,
                 forecast_data=forecast_data,
                 search_context=search_context
             )
-            logger.info(f"Summary generated: {summary[:100]}...")
-            data_sources.append("Google Gemini API")
-        except Exception as e:
-            logger.error(f"Interpreter failed: {type(e).__name__}: {str(e)}")
-            # Use fallback summary
-            aqi_category = aqi_data.get('category', 'Unknown')
-            summary = f"Tomorrow in {request.city}: {forecast_data['temp']}°C, {forecast_data['humidity']}% humidity, AQI {forecast_data['aqi']} ({aqi_category})."
-            logger.info(f"Using fallback summary: {summary}")
-        
-        # Step 5: Generate recommendations
-        logger.info("Step 5: Generating recommendations...")
-        try:
-            advice = recommender.recommend(
+            advice_future = pool.submit(
+                recommender.recommend,
                 aqi=forecast_data["aqi"],
                 profile=request.profile if request.profile else None,
                 search_context=search_context,
@@ -458,23 +457,38 @@ async def predict(request: PredictionRequest):
                     "wind": forecast_data.get("wind")
                 }
             )
-            logger.info(f"Advice generated: {advice[:100]}...")
-        except Exception as e:
-            logger.error(f"Recommender failed: {type(e).__name__}: {str(e)}")
-            # Use fallback advice based on AQI
-            aqi = forecast_data["aqi"]
-            if aqi <= 50:
-                advice = "Air quality is good. Enjoy outdoor activities!"
-            elif aqi <= 100:
-                advice = "Air quality is moderate. Sensitive individuals should consider limiting prolonged outdoor activities."
-            elif aqi <= 150:
-                advice = "Air quality is unhealthy for sensitive groups. Consider reducing outdoor activities if you have respiratory conditions."
-            elif aqi <= 200:
-                advice = "Air quality is unhealthy. Everyone should reduce prolonged outdoor exertion."
-            else:
-                advice = "Air quality is very unhealthy or hazardous. Avoid outdoor activities and stay indoors."
-            logger.info(f"Using fallback advice: {advice}")
-        
+
+            try:
+                summary = summary_future.result()
+                logger.info(f"Summary generated: {summary[:100]}...")
+                # Either provider may have answered; llm.generate picks at call time.
+                data_sources.append("AI summary (Gemini/Groq)")
+            except Exception as e:
+                logger.error(f"Interpreter failed: {type(e).__name__}: {str(e)}")
+                # Use fallback summary
+                aqi_category = aqi_data.get('category', 'Unknown')
+                summary = f"Tomorrow in {request.city}: {forecast_data['temp']}°C, {forecast_data['humidity']}% humidity, AQI {forecast_data['aqi']} ({aqi_category})."
+                logger.info(f"Using fallback summary: {summary}")
+
+            try:
+                advice = advice_future.result()
+                logger.info(f"Advice generated: {advice[:100]}...")
+            except Exception as e:
+                logger.error(f"Recommender failed: {type(e).__name__}: {str(e)}")
+                # Use fallback advice based on AQI
+                aqi = forecast_data["aqi"]
+                if aqi <= 50:
+                    advice = "Air quality is good. Enjoy outdoor activities!"
+                elif aqi <= 100:
+                    advice = "Air quality is moderate. Sensitive individuals should consider limiting prolonged outdoor activities."
+                elif aqi <= 150:
+                    advice = "Air quality is unhealthy for sensitive groups. Consider reducing outdoor activities if you have respiratory conditions."
+                elif aqi <= 200:
+                    advice = "Air quality is unhealthy. Everyone should reduce prolonged outdoor exertion."
+                else:
+                    advice = "Air quality is very unhealthy or hazardous. Avoid outdoor activities and stay indoors."
+                logger.info(f"Using fallback advice: {advice}")
+
         # Process today's data if available
         today_forecast = None
         today_aqi_data = None
