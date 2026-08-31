@@ -2,10 +2,8 @@
 Predictor Agent - Predicts tomorrow's AQI using trained ML model
 Uses the best model trained on city_day.csv dataset
 """
-import joblib
 import os
 import logging
-import numpy as np
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 
@@ -203,6 +201,7 @@ class PredictorAgent:
         # Load trained ML model
         if os.path.exists(model_path):
             try:
+                import joblib  # only needed when a trained model is present
                 self.model = joblib.load(model_path)
                 logger.info(f"✓ ML model loaded from {model_path}")
                 
@@ -269,6 +268,7 @@ class PredictorAgent:
             features.append(city_encoded)
             
             # Scale features
+            import numpy as np  # only needed on the ML path
             features_array = np.array(features).reshape(1, -1)
             features_scaled = self.scaler.transform(features_array)
             

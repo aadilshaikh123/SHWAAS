@@ -117,7 +117,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
 
 # Primary AQI source (already configured)
-WAQI_API_KEY=7616cb77c13b13fd483b76c94ae8ba422dc94e8c
+WAQI_API_KEY=your_waqi_api_token_here
 ```
 
 **Get API Keys:**

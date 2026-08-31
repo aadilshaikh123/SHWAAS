@@ -1,9 +1,12 @@
 """
 Recommender Agent - Provides personalized health and activity advice based on AQI
 """
-import time
+import logging
 from typing import Dict, Optional
-import google.generativeai as genai
+
+from backend.agents import llm
+
+logger = logging.getLogger(__name__)
 
 
 class RecommenderAgent:
@@ -19,23 +22,7 @@ class RecommenderAgent:
         Args:
             gemini_api_key: Google Gemini API key
         """
-        genai.configure(api_key=gemini_api_key)
-        # Try multiple model names in order of preference
-        model_names = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-        self.model = None
-        for model_name in model_names:
-            try:
-                self.model = genai.GenerativeModel(model_name)
-                print(f"✓ Using Gemini model: {model_name}")
-                break
-            except:
-                continue
-        
-        if not self.model:
-            self.model = genai.GenerativeModel('gemini-pro')  # Fallback
-        
-        self.max_retries = 3
-        self.base_delay = 1  # seconds
+        self.gemini_api_key = gemini_api_key
     
     def recommend(self, aqi: int, profile: Optional[str] = None, search_context: Optional[str] = None, pollutants: Optional[Dict] = None, weather_data: Optional[Dict] = None) -> str:
         """
@@ -92,38 +79,21 @@ AIR QUALITY:
         prompt += """
 
 INSTRUCTIONS:
-1. Provide 4-6 specific, actionable recommendations
-2. Address outdoor activities, exercise, and daily routines
-3. Include protective measures (masks, air purifiers, timing of activities)
-4. Mention vulnerable groups if relevant
-5. Explain WHY certain precautions are needed (connect to specific pollutants)
-6. If user has health conditions, provide targeted advice
-7. Reference weather conditions and how they affect air quality
-8. Be supportive and practical, not alarmist
-9. Include timing recommendations (best/worst times of day)
+Give 4-5 specific, actionable recommendations, one per line, one sentence each. Each
+one should briefly say why - connect it to the pollutant or weather condition that
+makes it necessary. Cover outdoor activity and timing (best and worst hours), and
+protective measures like masks or air purifiers where they are warranted. Be practical
+and supportive, not alarmist.
 
-Make it comprehensive, scientific, yet easy to understand and follow."""
+Output plain text only, one recommendation per line. No markdown, no headings, no
+bullet characters, no numbering, no bold, no asterisks or hash characters. Do not add
+a preamble or a closing line - just the recommendations."""
         
-        # Try to get response from Gemini API with retry logic
-        for attempt in range(self.max_retries):
-            try:
-                response = self.model.generate_content(prompt)
-                
-                # Extract the advice text
-                advice = response.text.strip()
-                
-                return advice
-                
-            except Exception as e:
-                if attempt < self.max_retries - 1:
-                    # Exponential backoff
-                    delay = self.base_delay * (2 ** attempt)
-                    print(f"Gemini API call failed (attempt {attempt + 1}/{self.max_retries}): {e}. Retrying in {delay}s...")
-                    time.sleep(delay)
-                else:
-                    # Final attempt failed, use fallback
-                    print(f"Gemini API recommendation failed after {self.max_retries} attempts: {e}. Using fallback template.")
-                    return self._fallback_advice_detailed(aqi, profile, pollutants, weather_data)
+        try:
+            return llm.generate(prompt, self.gemini_api_key)
+        except llm.AllProvidersFailed as e:
+            logger.warning(f"All LLM providers failed ({e}); using fallback template.")
+            return self._fallback_advice_detailed(aqi, profile, pollutants, weather_data)
     
     def _get_aqi_category(self, aqi: int) -> str:
         """
@@ -229,7 +199,7 @@ Make it comprehensive, scientific, yet easy to understand and follow."""
                 else:
                     advice_parts.append("For your respiratory condition: Have your medication available and monitor any changes in breathing.")
             
-            if any(activity in profile_lower for condition in ["jogging", "running", "exercise", "cycling", "workout"]):
+            if any(activity in profile_lower for activity in ["jogging", "running", "exercise", "cycling", "workout"]):
                 if aqi > 150:
                     advice_parts.append("Exercise recommendation: Switch to indoor workouts. Gyms, home exercises, or indoor sports are safer alternatives.")
                 elif aqi > 100:

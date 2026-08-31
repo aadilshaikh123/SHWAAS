@@ -1,9 +1,12 @@
 """
 Interpreter Agent - Generates natural language summaries of weather forecasts
 """
-import time
+import logging
 from typing import Dict, Optional
-import google.generativeai as genai
+
+from backend.agents import llm
+
+logger = logging.getLogger(__name__)
 
 
 class InterpreterAgent:
@@ -19,17 +22,7 @@ class InterpreterAgent:
         Args:
             gemini_api_key: Google Gemini API key
         """
-        genai.configure(api_key=gemini_api_key)
-        # Use the latest available Gemini model
-        try:
-            self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        except:
-            try:
-                self.model = genai.GenerativeModel('gemini-1.5-pro')
-            except:
-                self.model = genai.GenerativeModel('gemini-pro')
-        self.max_retries = 3
-        self.base_delay = 1  # seconds
+        self.gemini_api_key = gemini_api_key
     
     def summarize(self, forecast_data: Dict, search_context: Optional[str] = None) -> str:
         """
@@ -87,36 +80,18 @@ AIR QUALITY DATA:
         prompt += """
 
 INSTRUCTIONS:
-1. Provide a comprehensive 3-4 sentence summary
-2. Explain what the AQI level means in practical terms
-3. Mention the dominant pollutant and why it matters
-4. Connect weather conditions to air quality (e.g., how wind/humidity affects pollution)
-5. Reference any relevant news context if provided
-6. Use clear, accessible language for general audience
-7. Include specific health implications
+Write 3-4 sentences of plain prose covering what this AQI level means in practical
+terms, the dominant pollutant and why it matters, and how the weather conditions are
+driving the air quality. Use clear, everyday language.
 
-Make it informative, scientific yet accessible, and actionable."""
+Output plain text only. No markdown, no headings, no bullet points, no bold, no
+asterisks or hash characters. Do not add a preamble - start with the forecast itself."""
         
-        # Try to get response from Gemini API with retry logic
-        for attempt in range(self.max_retries):
-            try:
-                response = self.model.generate_content(prompt)
-                
-                # Extract the summary text
-                summary = response.text.strip()
-                
-                return summary
-                
-            except Exception as e:
-                if attempt < self.max_retries - 1:
-                    # Exponential backoff
-                    delay = self.base_delay * (2 ** attempt)
-                    print(f"Gemini API call failed (attempt {attempt + 1}/{self.max_retries}): {e}. Retrying in {delay}s...")
-                    time.sleep(delay)
-                else:
-                    # Final attempt failed, use fallback
-                    print(f"Gemini API summarization failed after {self.max_retries} attempts: {e}. Using fallback template.")
-                    return self._fallback_summary_detailed(forecast_data)
+        try:
+            return llm.generate(prompt, self.gemini_api_key)
+        except llm.AllProvidersFailed as e:
+            logger.warning(f"All LLM providers failed ({e}); using fallback template.")
+            return self._fallback_summary_detailed(forecast_data)
     
     def _get_aqi_category(self, aqi: int) -> str:
         """
@@ -160,7 +135,11 @@ Make it informative, scientific yet accessible, and actionable."""
         aqi = forecast_data.get("aqi", "N/A")
         dominant_pollutant = forecast_data.get("dominant_pollutant", "PM2.5")
         aqi_category = self._get_aqi_category(aqi) if isinstance(aqi, int) else "unknown"
-        
+
+        # Round for display - raw sensor floats like 30.866666666666664 read badly.
+        temp, humidity, wind = (round(v, 1) if isinstance(v, (int, float)) else v
+                                for v in (temp, humidity, wind))
+
         # Build detailed fallback summary
         summary = f"Tomorrow's forecast shows {temp}°C with {humidity}% humidity and wind speeds of {wind} km/h. "
         summary += f"Air quality is {aqi_category.lower()} with an AQI of {aqi}, primarily driven by {dominant_pollutant}. "

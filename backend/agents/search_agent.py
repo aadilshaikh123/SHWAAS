@@ -133,15 +133,16 @@ class SearchAgent:
                 
                 try:
                     # Call Tavily API with search parameters
+                    # topic="news" + days is what makes these results actually recent.
+                    # Without them Tavily returns undated evergreen pages (a site's
+                    # "Monthly Weather" landing page), which is not news at all.
+                    # The old include_domains whitelist made that worse by favouring
+                    # those same landing pages, so it is gone.
                     response = self.client.search(
                         query=query,
-                        search_depth="advanced",
+                        topic="news",
+                        days=7,
                         max_results=2,  # 2 per query = 12 total
-                        include_domains=[
-                            "weather.com", "accuweather.com", "iqair.com", "airnow.gov",
-                            "bbc.com", "cnn.com", "reuters.com", "theguardian.com",
-                            "aljazeera.com", "apnews.com", "timesofindia.com", "hindustantimes.com"
-                        ],
                         include_answer=True
                     )
                     
